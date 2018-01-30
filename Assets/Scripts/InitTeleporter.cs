@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class InitTeleporter : MonoBehaviour {
+
     public CollectableType evolutionType;
+
     bool isTeleporterActive = false;
     Color startColor;
     bool teleportToMinigame = false;
@@ -115,7 +117,6 @@ public class InitTeleporter : MonoBehaviour {
         for (int i = 0; i < players.Count; i++)
         {
             Player currentPlayer = players[i].GetComponent<Player>();
-            GameManager.Instance.playerCollectables[i] = currentPlayer.Collectables;
             GameManager.Instance.playerCostAreaTutoShown[i] = currentPlayer.costAreaTutoShown;
             GameManager.Instance.playerEvolutionTutoShown[i] = currentPlayer.evolutionTutoShown;
         }
@@ -128,8 +129,7 @@ public class InitTeleporter : MonoBehaviour {
         if (teleportToMinigame && lerpValueAnim < 1.0f)
             return;
 
-        if (isTeleporterActive && 
-            (Utils.CheckEvolutionAndCollectableTypeCompatibility(evolutionType, collision.transform.GetComponent<EvolutionComponent>())
+        if (isTeleporterActive && (Utils.CheckEvolutionAndCollectableTypeCompatibility(evolutionType, collision.transform.GetComponent<EvolutionComponent>())
             || teleportToMinigame))
         {
             if (meshRenderer != null)

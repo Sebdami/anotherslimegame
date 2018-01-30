@@ -46,7 +46,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
     int separationMask3;
     Collider[] breakablesCollided;
 
-    PlayerController playerController;
+    PlayerControllerHub playerController;
     Rigidbody rb;
     Player player;
 
@@ -68,12 +68,12 @@ public class PlayerCollisionCenter : MonoBehaviour {
     public float waterUpliftStrength;
     [Range(0.01f, 1.0f)]
     public float modulateWaterForceFactor;
-    PlayerController _PlayerController
+    PlayerControllerHub _PlayerController
     {
         get
         {
             if (playerController == null)
-                playerController = GetComponent<PlayerController>();
+                playerController = GetComponent<PlayerControllerHub>();
             return playerController;
         }
     }
@@ -100,7 +100,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
 
     void Start()
     {
-        playerController = GetComponent<PlayerController>();
+        playerController = GetComponent<PlayerControllerHub>();
         rb = GetComponent<Rigidbody>();
         repulsionFactor = 35;
 
@@ -144,7 +144,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
                             currentTimerStop = timerStopOnDashCollision;
 
                             playerController.PlayerState = playerController.frozenState;
-                            playersCollided[i].GetComponent<PlayerController>().PlayerState = playersCollided[i].GetComponent<PlayerController>().frozenState;
+                            playersCollided[i].GetComponent<PlayerControllerHub>().PlayerState = playersCollided[i].GetComponent<PlayerControllerHub>().frozenState;
                             velocityOnImpact = playerController.Rb.velocity;
                             playerController.Rb.velocity = Vector3.zero;
                             impactedPlayersOldVelocities.Add(playersCollided[i].GetComponent<Rigidbody>().velocity);
@@ -152,7 +152,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
 
                             //Set vibrations
                             UWPAndXInput.GamePad.VibrateForSeconds(playerController.playerIndex, 0.8f, 0.8f, .1f);
-                            UWPAndXInput.GamePad.VibrateForSeconds(playersCollided[i].GetComponent<PlayerController>().playerIndex, 0.8f, 0.8f, .1f);
+                            UWPAndXInput.GamePad.VibrateForSeconds(playersCollided[i].GetComponent<PlayerControllerHub>().playerIndex, 0.8f, 0.8f, .1f);
 
                             if (AudioManager.Instance != null && AudioManager.Instance.punchFx != null)
                                 AudioManager.Instance.PlayOneShot(AudioManager.Instance.punchFx);
@@ -174,7 +174,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
                             currentTimerStop = timerStopOnDashCollision;
 
                             playerController.PlayerState = playerController.frozenState;
-                            playersCollided[i].GetComponent<PlayerController>().PlayerState = playersCollided[i].GetComponent<PlayerController>().frozenState;
+                            playersCollided[i].GetComponent<PlayerControllerHub>().PlayerState = playersCollided[i].GetComponent<PlayerControllerHub>().frozenState;
                             velocityOnImpact = playerController.Rb.velocity;
                             playerController.Rb.velocity = Vector3.zero;
                             impactedPlayersOldVelocities.Add(playersCollided[i].GetComponent<Rigidbody>().velocity);
@@ -182,7 +182,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
 
                             //Set vibrations
                             UWPAndXInput.GamePad.VibrateForSeconds(playerController.playerIndex, 0.8f, 0.8f, .1f);
-                            UWPAndXInput.GamePad.VibrateForSeconds(playersCollided[i].GetComponent<PlayerController>().playerIndex, 0.8f, 0.8f, .1f);
+                            UWPAndXInput.GamePad.VibrateForSeconds(playersCollided[i].GetComponent<PlayerControllerHub>().playerIndex, 0.8f, 0.8f, .1f);
 
                             if (AudioManager.Instance != null && AudioManager.Instance.punchFx != null)
                                 AudioManager.Instance.PlayOneShot(AudioManager.Instance.punchFx);
@@ -237,7 +237,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
                 playerController.PlayerState = playerController.freeState;
                 for (int i = 0; i < impactedPlayers.Count; i++)
                 {
-                    impactedPlayers[i].GetComponent<PlayerController>().PlayerState = impactedPlayers[i].GetComponent<PlayerController>().freeState;
+                    impactedPlayers[i].GetComponent<PlayerControllerHub>().PlayerState = impactedPlayers[i].GetComponent<PlayerControllerHub>().freeState;
                     ImpactHandling(impactedPlayers[i]);
                 }
                 hasCollidedWithAPlayer = false;
@@ -250,7 +250,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
         // Interaction Joueur / Joueur
         if (collision.gameObject.GetComponent<Player>())
         {
-            PlayerController collidedPlayerController = collision.transform.gameObject.GetComponent<PlayerController>();
+            PlayerControllerHub collidedPlayerController = collision.transform.gameObject.GetComponent<PlayerControllerHub>();
 
             if (collidedPlayerController == null) return;
 
@@ -319,15 +319,15 @@ public class PlayerCollisionCenter : MonoBehaviour {
     {
 
         // Damage Behavior
-        DamagePlayer(playerImpacted);
-        //Physics.IgnoreCollision()
-        // ExpluseForce
-
-        //if (_PlayerController.StrengthState == SkillState.Dashing) repulsionMultiplier *= -2;
+        if (GameManager.Instance.CurrentGameMode.TakesDamageFromPlayer)
+        {
+            if (GameManager.Instance.IsInHub())
+                DamagePlayerHub();
+            else
+                DamagePlayer(playerImpacted, PlayerUIStat.Points);
+        }
         
         ExpulsePlayer(playerImpacted.GetComponent<Collider>().ClosestPoint(transform.position), playerImpacted.Rb, repulsionFactor);
-        //RepulseRigibody(playersCollided[i].ClosestPoint(transform.position), playersCollided[i].GetComponent<Rigidbody>(), repulsionFactor);
-
     }
 
     public void DefaultCollision(Collision collision, Player playerImpacted)
@@ -353,51 +353,59 @@ public class PlayerCollisionCenter : MonoBehaviour {
         }
     }
 
-    public void DamagePlayer(Player player)
+
+
+    public void DamagePlayerHub()
+    {
+        if (GameManager.Instance.GlobalMoney == 0)
+            return;
+
+        int numberOfCollectablesToDrop = (int)Mathf.Clamp(((float)GameManager.Instance.GlobalMoney / Utils.GetDefaultCollectableValue((int)CollectableType.Money)), 1, 6);
+
+        GameManager.Instance.GlobalMoney -= numberOfCollectablesToDrop * Utils.GetDefaultCollectableValue((int)CollectableType.Money);
+
+        for (int i = 0; i < numberOfCollectablesToDrop; i++)
+        {
+            GameObject go = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.Money).GetItem(null, transform.position + Vector3.up * 0.5f, player.transform.rotation, true);
+            go.GetComponent<Collectable>().Disperse(i);
+        }
+    }
+
+    public void DamagePlayer(Player player, PlayerUIStat _damageOn)
     {
         // Damage Behavior
-        int typeCollectable = (int)CollectableType.Points;
-        //switch (GameManager.CurrentGameMode.gameModeType)
-        //{
-        //    case GameModeType.Escape:
-        //        typeCollectable = (int)CollectableType.Points; break;
-        //    case GameModeType.Arena:
-        //        typeCollectable = (int)CollectableType.Points; break;
-        //    default:
-        //        break;
-        //}
+        int typeCollectable = -1;
+        int quantity = 0;
 
-        //if (typeCollectable == -1) return;
-
-        if (player.Collectables[(int)CollectableType.Key] > 0)
+        if (_damageOn == PlayerUIStat.Life)
         {
-            int random = Random.Range(1, Utils.GetMaxValueForCollectable(CollectableType.Key)+1);
-            if(random > Utils.GetMaxValueForCollectable(CollectableType.Key) - player.Collectables[(int)CollectableType.Key])
-                typeCollectable = (int)CollectableType.Key;
-        } 
+            quantity = player.NbLife;
+            // TMP
+            typeCollectable = (int)CollectableType.Points;
+        }
 
-
-        if (player.Collectables[typeCollectable] > 0)
+        else if (_damageOn == PlayerUIStat.Points)
         {
-            int numberOfCollectablesToDrop;
-            if (typeCollectable == (int)CollectableType.Key) numberOfCollectablesToDrop = 1;
-            else numberOfCollectablesToDrop = (int)Mathf.Clamp(((float)(player.Collectables[typeCollectable]) / Utils.GetDefaultCollectableValue(typeCollectable)), 1, 6);
-            for (int i = 0; i < numberOfCollectablesToDrop; i++)
+            quantity = player.NbPoints;
+            // TMP
+            typeCollectable = (int)CollectableType.Points;
+        }
+
+        if (quantity == 0 || typeCollectable == -1)
+            return;
+
+
+
+        int numberOfCollectablesToDrop = (int)Mathf.Clamp(((float)quantity / Utils.GetDefaultCollectableValue(typeCollectable)), 1, 6);
+
+        player.UpdateCollectableValue((CollectableType)typeCollectable, -numberOfCollectablesToDrop * Utils.GetDefaultCollectableValue(typeCollectable));
+
+        // Drop Points
+        for (int i = 0; i < numberOfCollectablesToDrop; i++)
+        {
+            if (_damageOn == PlayerUIStat.Points)
             {
-                player.UpdateCollectableValue((CollectableType)typeCollectable, -Utils.GetDefaultCollectableValue(typeCollectable));
-
-                GameObject go;
-                // TMP !!! DOUX pool thing + alternate key for collision check
-                if (typeCollectable == (int)CollectableType.Key)
-                {
-                    go = ResourceUtils.Instance.refPrefabLoot.SpawnCollectableInstance(transform.position + Vector3.up * 2f, transform.rotation, null, CollectableType.Key);
-                    go.GetComponent<Collectable>().Init();
-                    go.GetComponent<Collectable>().hasBeenSpawned = true;
-                    go.GetComponent<Collectable>().lastOwner = player;
-                }
-                else
-                    go = ResourceUtils.Instance.poolManager.collectablePointsPool.GetItem(null, transform.position + Vector3.up * 0.5f, player.transform.rotation, true);
-
+                GameObject go = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.CollectablePoints).GetItem(null, transform.position + Vector3.up * 0.5f, player.transform.rotation, true);
                 go.GetComponent<Collectable>().Disperse(i);
             }
         }
@@ -415,7 +423,7 @@ public class PlayerCollisionCenter : MonoBehaviour {
 
     public void RepulseRigibody(Vector3 collisionPoint, Rigidbody rbPlayerToExpulse, float repulsionFactor)
     {
-        if (!onceRepulsion && rbPlayerToExpulse.GetComponent<PlayerController>())
+        if (!onceRepulsion && rbPlayerToExpulse.GetComponent<PlayerControllerHub>())
         {
             onceRepulsion = true;
 
@@ -445,9 +453,9 @@ public class PlayerCollisionCenter : MonoBehaviour {
 
     public void ForcedJump(Vector3 direction, float repulseStrength, Rigidbody target)
     {
-        if (target.GetComponent<PlayerController>() != null)
+        if (target.GetComponent<PlayerControllerHub>() != null)
         {
-            PlayerController _pcTarget = target.GetComponent<PlayerController>();
+            PlayerControllerHub _pcTarget = target.GetComponent<PlayerControllerHub>();
             _pcTarget.jumpState.nbJumpMade = 0;
             _pcTarget.PlayerState.OnJumpPressed();
             _pcTarget.PlayerState.PushPlayer(direction* repulseStrength);

@@ -11,11 +11,11 @@ public class Tampax
     public GameObject gameplayRoomStarter;
 }
 
-public class HUBManager : MonoBehaviour {
+public class HUBManager : MonoBehaviour
+{
 
     public GameObject CostAreaMiniGamePush;
     public SpawnManager spawnManagerRef;
-    public IslandSpawner islandSpawner;
 
     public WaterState WaterState = WaterState.Clear;
 
@@ -34,25 +34,12 @@ public class HUBManager : MonoBehaviour {
 
     // Gameplay room starters
     public List<Tampax> gameplayRoomStarters = new List<Tampax>();
-    
+
     public void Awake()
     {
         instance = this;
-        islandSpawner = GetComponent<IslandSpawner>();
     }
     #endregion
-    // End modif tmp
-
-    public void Start()
-    {
-        UpdateHUBWithData(GameManager.Instance.unlockedMinigames);
-
-    }
-
-    public void UpdateHUBWithData(bool[] _activateMinigames)
-    {
-        if (_activateMinigames[(int)MiniGame.KickThemAll]) CostAreaMiniGamePush.GetComponent<CostArea>().UnlockAssociatedMinigame();
-    }
 
     // HUB events
     // Water

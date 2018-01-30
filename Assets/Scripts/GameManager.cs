@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 
 public enum GameState { Normal, Paused, ForcedPause }
+
 public class GameManager : MonoBehaviour {
 
     private static GameManager instance = null;
@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour {
     private static GameState currentState = GameState.Normal;
     [SerializeField]
     private PlayerStart playerStart;
-    private PlayerUI playerUI;
+    private APlayerUI specificPlayerUI;
+    private SlimeDataContainer dataContainer;
 
     // WARNING, should be reset on load scene
     public bool isTimeOver = false;
@@ -24,10 +25,7 @@ public class GameManager : MonoBehaviour {
 
     public GameObject activeTutoTextForAll;
 
-    public bool[] unlockedMinigames = new bool[(int)MiniGame.Size];
-
-    // TODO: move this
-    public int[][] playerCollectables;
+    // Players persistence
     public bool[][] playerEvolutionTutoShown;
     public bool[] playerCostAreaTutoShown;
 
@@ -37,6 +35,7 @@ public class GameManager : MonoBehaviour {
         {
             if (instance == null)
             {
+
                 instance = new GameObject("GameManager").AddComponent<GameManager>();
                 DontDestroyOnLoad(instance);
             }
@@ -80,14 +79,6 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    //public static GameModeManager GameModeManager
-    //{
-    //    get
-    //    {
-    //        return gameModeManager;
-    //    }
-    //}
-
     public static GameState CurrentState
     {
         get
@@ -109,11 +100,24 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public bool IsInHub()
+    {
+        return CurrentGameMode.GetType() == typeof(HubMode);
+    }
+
     public PlayerStart PlayerStart
     {
         get
         {
             return playerStart;
+        }
+    }
+
+    public SlimeDataContainer DataContainer
+    {
+        get
+        {
+            return dataContainer;
         }
     }
 
@@ -133,14 +137,6 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public PlayerUI PlayerUI
-    {
-        get
-        {
-            return playerUI;
-        }
-    }
-
     public float GameFinalTimer
     {
         get
@@ -154,14 +150,74 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public int Runes
+    {
+        get
+        {
+            return DatabaseManager.Db.nbRunes;
+        }
+
+        set
+        {
+            DatabaseManager.Db.nbRunes = Mathf.Clamp(value, 0, Utils.GetMaxValueForCollectable(CollectableType.Rune));
+
+
+            // Unlock minigame base
+            foreach( DatabaseClass.MinigameData minigame in DatabaseManager.Db.minigames)
+            {
+                if (DatabaseManager.Db.nbRunes >= minigame.nbRunesToUnlock && minigame.nbRunesToUnlock != -1 && !DatabaseManager.Db.IsUnlock<DatabaseClass.MinigameData>(minigame.Id))
+                {
+                    // TODO: Notifier le joueur
+                    DatabaseManager.Db.SetUnlock<DatabaseClass.MinigameData>(minigame.Id, true);
+                }
+            }
+            UiReference.UpdateRunes();
+            UiReference.TooglePersistenceUI(true);
+        }
+    }
+
+    public int GlobalMoney
+    {
+        get
+        {
+            return DatabaseManager.Db.Money;
+        }
+
+        set
+        {
+            DatabaseManager.Db.Money = value;
+            UiReference.UpdateGlobalMoney();
+            UiReference.TooglePersistenceUI(true);
+
+        }
+    }
+
+    public APlayerUI SpecificPlayerUI
+    {
+        get
+        {
+            return specificPlayerUI;
+        }
+
+        set
+        {
+            specificPlayerUI = value;
+        }
+    }
+
     public void RegisterPlayerStart(PlayerStart _ps)
     {
         playerStart = _ps;
     }
 
-    public void RegisterPlayerUI(PlayerUI _pUI)
+    public void RegisterDataContainer(SlimeDataContainer _sdc)
     {
-        playerUI = _pUI;
+        dataContainer = _sdc;
+    }
+
+    public void RegisterAPlayerUI(APlayerUI _minigamePUI)
+    {
+        SpecificPlayerUI = _minigamePUI;
     }
 
     public void RegisterScoreScreenPanel(ScoreScreen _ss)
@@ -180,6 +236,7 @@ public class GameManager : MonoBehaviour {
             {
                 currentState = GameState.Normal;
                 pauseMenuReference.gameObject.SetActive(false);
+                UiReference.TooglePersistenceUI(false);
                 for (int i = 0; i < instance.playerStart.ActivePlayersAtStart; i++)
                     instance.playerStart.cameraPlayerReferences[i].transform.GetChild(0).GetComponent<Cinemachine.CinemachineBrain>().enabled = true;
             }
@@ -187,10 +244,12 @@ public class GameManager : MonoBehaviour {
             {
                 currentState = GameState.Paused;
                 pauseMenuReference.gameObject.SetActive(true);
-           
+                UiReference.TooglePersistenceUI(true);
                 for (int i = 0; i < instance.playerStart.ActivePlayersAtStart; i++)
                     instance.playerStart.cameraPlayerReferences[i].transform.GetChild(0).GetComponent<Cinemachine.CinemachineBrain>().enabled = false;
             }
+
+
         }
 
         else if (_newState == GameState.Normal)

@@ -1,7 +1,10 @@
 ﻿using UnityEngine;
 
 public enum PlayerChildren { SlimeMesh, ShadowProjector, BubbleParticles, SplashParticles, CameraTarget, DustTrailParticles, DashParticles, LandingParticles };
-public enum KeyFrom { Shelter, CostArea };
+
+public enum PlayerUIStat { Life, Points, Size}
+
+public delegate void UIfct(int _newValue);
 
 public class Player : MonoBehaviour {
 
@@ -19,11 +22,15 @@ public class Player : MonoBehaviour {
     Animator anim;
     public bool hasBeenTeleported = false;
 
-    [SerializeField]
-    KeyReset[] keysReset;
-
     public bool isEdgeAssistActive = true;
-    PlayerController playerController;
+    PlayerControllerHub playerController;
+
+    // UI [] typeCollectable
+    public UIfct[] OnValuesChange;
+
+    // for miniGame Push
+    [SerializeField] private int nbLife = -1;
+    [SerializeField] private int nbPoints = 0;
 
     public bool[] evolutionTutoShown = new bool[(int)Powers.Size];
     public bool costAreaTutoShown = false;
@@ -37,16 +44,10 @@ public class Player : MonoBehaviour {
 
     public int rank = 0;
 
-    private bool feedbackCantPayActive = false;
-    float timerFeedbackCantPay = 2.0f;
-    float currentFeedbackCantPay = 0.0f;
-
     // Ugly
     public bool isInMainTower = false;
 
-    // for miniGame Push
-    [SerializeField]private int nbLife = -1;
-    //
+
 
 #region Accessors
     public Rigidbody Rb
@@ -92,25 +93,12 @@ public class Player : MonoBehaviour {
         }
     }
 
-    public int[] Collectables
-    {
-        get
-        {
-            return collectables;
-        }
-
-        set
-        {
-            collectables = value;
-        }
-    }
-
-    public PlayerController PlayerController
+    public PlayerControllerHub PlayerController
     {
         get
         {
             if (playerController == null)
-                playerController = GetComponent<PlayerController>();
+                playerController = GetComponent<PlayerControllerHub>();
             return playerController;
         }
 
@@ -127,76 +115,13 @@ public class Player : MonoBehaviour {
         {
             if (value == true)
             {
-
                 PlayerController.enabled = false;
 
                 // Making the player to stop in the air 
                 Rb.Sleep(); // Quelque part là, il y a un sleep
-
-                // TODO: REACTIVATE INSTEAD OF INSTANTIATE (keys must not be destroyed too)
-                if (!GameManager.Instance.isTimeOver)
-                {
-                    for (int i = 0; i < Utils.GetMaxValueForCollectable(CollectableType.Key); i++)
-                    {
-                        if (KeysReset[i] == null)
-                            break;
-
-                        if (KeysReset[i].from == KeyFrom.CostArea)
-                        {
-                            // ConvertArrayOfBoolToString
-                            KeysReset[i].initialTransform.GetComponent<CostArea>().Reactivate();
-                        }
-                        else if (KeysReset[i].from == KeyFrom.Shelter)
-                        {
-                            // TODO: reactivate
-                            ResourceUtils.Instance.refPrefabLoot.SpawnCollectableInstance(
-                                KeysReset[i].initialPosition,
-                                KeysReset[i].initialRotation,
-                                null,
-                                CollectableType.Key)
-                            .GetComponent<Collectable>().Init();
-                        }
-                    }
-                }
             }
 
             hasFinishedTheRun = value;
-        }
-    }
-
-    public KeyReset[] KeysReset
-    {
-        get
-        {
-            return keysReset;
-        }
-    }
-
-    public bool FeedbackCantPayActive
-    {
-        get
-        {
-            return feedbackCantPayActive;
-        }
-
-        set
-        {
-            if (value == true)
-                currentFeedbackCantPay = timerFeedbackCantPay;
-            feedbackCantPayActive = value;
-        }
-    }
-
-    public int NbLife
-    {
-        get
-        {
-            return nbLife;
-        }
-
-        set
-        {
-            nbLife = value;
         }
     }
 
@@ -217,6 +142,35 @@ public class Player : MonoBehaviour {
             pendingTutoText = value;
         }
     }
+
+    public int NbLife
+    {
+        get
+        {
+            return nbLife;
+        }
+
+        set
+        {
+            nbLife = value;
+            CallOnValueChange(PlayerUIStat.Life, nbLife);
+        }
+    }
+
+    public int NbPoints
+    {
+        get
+        {
+            return nbPoints;
+        }
+
+        set
+        {
+            nbPoints = value;
+            CallOnValueChange(PlayerUIStat.Points, nbPoints);
+        }
+    }
+
     #endregion
 
     private void Awake()
@@ -224,38 +178,33 @@ public class Player : MonoBehaviour {
         rb = GetComponent<Rigidbody>();
         collectables = new int[(int)CollectableType.Size];
     }
-    void Start()
-    {
-        
-        keysReset = new KeyReset[Utils.GetMaxValueForCollectable(CollectableType.Key)];
-    }
 
     public void UpdateCollectableValue(CollectableType type, int pickedValue)
     {
-        collectables[(int)type] = Mathf.Clamp(collectables[(int)type] + pickedValue, 0, Utils.GetMaxValueForCollectable(type));
-        if (type == CollectableType.Key)
-            GameManager.Instance.PlayerUI.RefreshKeysPlayerUi(this, collectables[(int)type]);
-        if (type == CollectableType.Points)
-            GameManager.Instance.PlayerUI.RefreshPointsPlayerUi(this, collectables[(int)type], cameraReference.transform.GetSiblingIndex());
-
-        if (!Utils.IsAnEvolutionCollectable(type))
-            return;
-
-        EvolutionCheck(type);
+        switch (type)
+        {
+            case CollectableType.Rune:
+                GameManager.Instance.Runes += pickedValue;
+                break;
+            case CollectableType.Money:
+                GameManager.Instance.GlobalMoney += pickedValue;
+                break;
+            case CollectableType.Points:
+                NbPoints += pickedValue;  
+                break;
+            default:
+                EvolutionCheck(type);
+                break;
+        }     
     }
 
-    public void AddKeyInitialPosition(Transform _tr, KeyFrom _from)
+    public void CallOnValueChange(PlayerUIStat type, int _newValue)
     {
-        int currentlyHold = collectables[(int)CollectableType.Key];
-        KeysReset[currentlyHold - 1] = new KeyReset(_tr, _from);
+        if (OnValuesChange != null)
+            if (OnValuesChange.Length > 0)
+                if (OnValuesChange[(int)type] != null)
+                        OnValuesChange[(int)type](_newValue);            
     }
-
-    public void AddKeyInitialPosition(KeyReset _keyData)
-    {
-        int currentlyHold = collectables[(int)CollectableType.Key];
-        KeysReset[currentlyHold - 1] = _keyData;
-    }
-
 
     public bool EvolutionCheck(CollectableType type, bool _launchProcessOnSucess = true)
     {
@@ -267,16 +216,10 @@ public class Player : MonoBehaviour {
             return canEvolve;
 
         if (canEvolve)
-            EvolutionProcess(_evolution);
+            PermanentEvolution(_evolution);
 
         return canEvolve;       
     }
-
-    void EvolutionProcess(Evolution _evolution)
-    {
-        PermanentEvolution(_evolution);
-    }
-
 
     private void PermanentEvolution(Evolution evolution)
     {
@@ -285,16 +228,6 @@ public class Player : MonoBehaviour {
 
     private void Update()
     {
-        if (FeedbackCantPayActive)
-        {
-            currentFeedbackCantPay -= Time.deltaTime;
-            if (currentFeedbackCantPay < 0.0f)
-            {
-                GameManager.Instance.PlayerUI.HandleFeedbackNotEnoughPoints(this, false);
-                FeedbackCantPayActive = false;
-            }
-        }
-
         if (tutoTextIsPending)
         {
             currentTimerPendingTutoText -= Time.deltaTime;
@@ -326,25 +259,5 @@ public class Player : MonoBehaviour {
     {
         if (other.tag == "TriggerMainTower")
             isInMainTower = false;
-    }
-}
-
-public class KeyReset
-{
-    public Transform initialTransform;
-    public KeyFrom from;
-
-    public Vector3 initialPosition;
-    public Quaternion initialRotation;
-
-    public KeyReset(Transform _initialTransform, KeyFrom _from)
-    {
-        initialTransform = _initialTransform;
-        if (_initialTransform != null)
-        {
-            initialPosition = _initialTransform.position;
-            initialRotation = _initialTransform.rotation;
-        }
-        from = _from;
     }
 }

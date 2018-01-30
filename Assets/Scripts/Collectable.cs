@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Collectable : MonoBehaviour
@@ -15,8 +16,6 @@ public class Collectable : MonoBehaviour
 
     bool isAttracted = false;
     Player playerTarget;
-
-    //public GameObject panneau;
 
     public bool hasBeenSpawned = false;
     public Player lastOwner;
@@ -46,6 +45,26 @@ public class Collectable : MonoBehaviour
             isAttracted = value;
         }
     }
+
+    public void Start()
+    {
+        if( type == CollectableType.Rune)
+        {
+            if(GetComponent<CreateEnumFromDatabase>() == null)
+            {
+                Debug.LogError("Start :It's a rune, it need a createEnumFromDatabase component link to the associated rune");
+                return;
+            }
+            string s = GetComponent<CreateEnumFromDatabase>().enumFromList[GetComponent<CreateEnumFromDatabase>().HideInt];
+            if (DatabaseManager.Db.IsUnlock<DatabaseClass.RuneData>(s))
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+        }
+
+    }
+
 
     private void OnEnable()
     {
@@ -89,15 +108,11 @@ public class Collectable : MonoBehaviour
         if (player && !IsAttracted && !haveToDisperse)
         {
             // Grab everything not linked to evolution (points)
-            if (!Utils.IsAnEvolutionCollectable(GetComponent <Collectable>().type))
+            if (!Utils.IsAnEvolutionCollectable(GetComponent<Collectable>().type))
             {
-                if (player.Collectables[(int)GetComponent<Collectable>().type] < Utils.GetMaxValueForCollectable(GetComponent<Collectable>().type))
-                {
-                    
-                    IsAttracted = true;
-                    playerTarget = player;
-                    return;
-                }
+                IsAttracted = true;
+                playerTarget = player;
+                return;
             }
             else if(player.activeEvolutions == 0)
             {
@@ -115,7 +130,18 @@ public class Collectable : MonoBehaviour
         GetComponent<Rigidbody>().MovePosition(transform.position + direction * movementSpeed * Time.deltaTime);
         if (Vector3.Distance(playerTarget.transform.position, transform.position) < GetComponent<BoxCollider>().bounds.extents.magnitude)
         {
-            playerTarget.UpdateCollectableValue(GetComponent<Collectable>().type, (int)GetComponent<Collectable>().Value);
+            playerTarget.UpdateCollectableValue(type, (int)Value);
+
+            if (type == CollectableType.Rune)
+            {
+                if (GetComponent<CreateEnumFromDatabase>() == null)
+                {
+                    Debug.LogError("Attract fct : It's a rune, it need a createEnumFromDatabase component link to the associated rune");
+                    return;
+                }
+                string s = GetComponent<CreateEnumFromDatabase>().enumFromList[GetComponent<CreateEnumFromDatabase>().HideInt];
+                DatabaseManager.Db.SetUnlock<DatabaseClass.RuneData>(s, true);
+            }
 
             if (AudioManager.Instance != null && AudioManager.Instance.coinFX != null) AudioManager.Instance.PlayOneShot(AudioManager.Instance.coinFX);
 
@@ -125,21 +151,6 @@ public class Collectable : MonoBehaviour
             }
             else
             {
-                if (GetComponent<Collectable>().type == CollectableType.Key)
-                {
-                    if (hasBeenSpawned)
-                    {
-                        int currentlyHoldByOwner = lastOwner.Collectables[(int)CollectableType.Key];
-
-                        KeyReset keyData = lastOwner.KeysReset[currentlyHoldByOwner];                      
-                        playerTarget.AddKeyInitialPosition(keyData);
-                        lastOwner.KeysReset[currentlyHoldByOwner] = null;
-                    }
-                    else
-                        playerTarget.AddKeyInitialPosition(transform, KeyFrom.Shelter);
-
-                }
-
                 Destroy(this.gameObject);
             }
         }

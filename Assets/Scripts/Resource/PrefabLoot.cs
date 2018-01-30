@@ -9,6 +9,10 @@ public class PrefabLoot : MonoBehaviour {
     [SerializeField]
     public GameObject prefabPointsDroppedGameObject;
     [SerializeField]
+    public GameObject prefabMoneyGameObject;
+    [SerializeField]
+    public GameObject prefabMoneyDroppedGameObject;
+    [SerializeField]
     public GameObject prefabStrengthEvolution1GameObject;
     [SerializeField]
     public GameObject prefabAgileEvolution1GameObject;
@@ -21,13 +25,6 @@ public class PrefabLoot : MonoBehaviour {
 
 
     [Header("UI")]
-    public GameObject prefabKeySprite;
-    public GameObject prefabPointSpriteRight;
-    public GameObject prefabPointSpriteLeft;
-    public GameObject prefabLifeSpriteRight;
-    public GameObject prefabLifeSpriteLeft;
-
-    public GameObject prefabPointPushGame;
 
     public GameObject prefabTutoText;
     public GameObject prefabTutoTextForAll;
@@ -45,11 +42,16 @@ public class PrefabLoot : MonoBehaviour {
             case CollectableType.GhostEvolution1:
                 return Instantiate(prefabGhostEvolution1GameObject, where, direction, parent);
             case CollectableType.Points:
-                if(!useAlternativePrefab)
+                if (!useAlternativePrefab)
                     return Instantiate(prefabPointsGameObject, where, direction, parent);
                 else
                     return Instantiate(prefabPointsDroppedGameObject, where, direction, parent);
-            case CollectableType.Key:
+            case CollectableType.Money:
+                if(!useAlternativePrefab)
+                    return Instantiate(prefabMoneyGameObject, where, direction, parent);
+                else
+                    return Instantiate(prefabMoneyDroppedGameObject, where, direction, parent);
+            case CollectableType.Rune:
                 return Instantiate(prefabKeyGameObject, where, direction, parent);
             default:
                 Debug.Log("Unknown Item type");

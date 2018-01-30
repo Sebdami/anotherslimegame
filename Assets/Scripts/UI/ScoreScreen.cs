@@ -34,11 +34,11 @@ public class ScoreScreen : MonoBehaviour {
     public void Init()
     {
 
-        //for (int i = 0; i < GameManager.Instance.PlayerStart.PlayersReference.Count; i++)
-        //{
-        //    GameObject playerScore = Instantiate(prefabPlayerScore, scorePanel.transform);
-        //    scorePanelPlayer.Add(GameManager.Instance.PlayerStart.PlayersReference[i].GetComponent<Player>(), playerScore);
-        //}
+        for (int i = 0; i < GameManager.Instance.PlayerStart.PlayersReference.Count; i++)
+        {
+            GameObject playerScore = Instantiate(prefabPlayerScore, scorePanel.transform);
+            scorePanelPlayer.Add(GameManager.Instance.PlayerStart.PlayersReference[i].GetComponent<Player>(), playerScore);
+        }
     }
 
     public void RefreshScores(Player player)
@@ -56,14 +56,13 @@ public class ScoreScreen : MonoBehaviour {
 
         String timeStr = string.Format("{0:00} : {1:00}", minutes, seconds);
 
-        if (SceneManager.GetActiveScene().name == MinigameManager.GetSceneNameFromMinigame(MiniGame.KickThemAll))
+        if(GameManager.Instance.CurrentGameMode.IsMiniGame())
         {
-            Debug.Log(transform.childCount);
             if (transform.childCount >= rank - 1) // who did this ugly line?
             {
                 transform.GetChild(rank - 1).GetComponent<PlayerScore>().SetScoreMiniGamePtsOnly(
                     (int)player.PlayerController.PlayerIndex,
-                    (player.Collectables[(int)CollectableType.Points]).ToString()
+                    player.NbPoints.ToString()
                 );
 
                 transform.GetChild(rank - 1).gameObject.SetActive(true);
@@ -82,7 +81,7 @@ public class ScoreScreen : MonoBehaviour {
                 transform.GetChild(rank - 1).GetComponent<PlayerScore>().SetScoreDefault(
                     (int)player.PlayerController.PlayerIndex,
                     GameManager.Instance.isTimeOver ? "Timeout" : timeStr,
-                    (player.Collectables[(int)CollectableType.Points]).ToString()
+                    player.NbPoints.ToString()
                 );
 
                 transform.GetChild(rank - 1).gameObject.SetActive(true);
@@ -114,7 +113,7 @@ public class ScoreScreen : MonoBehaviour {
             {
                 _curPlayer.HasFinishedTheRun = true;
                 if (remainingPlayers.Count == 0
-                    || remainingPlayers[remainingPlayers.Count - 1].Collectables[(int)CollectableType.Points] > _curPlayer.Collectables[(int)CollectableType.Points])
+                    || remainingPlayers[remainingPlayers.Count - 1].NbPoints > _curPlayer.NbPoints)
                 {
                     remainingPlayers.Add(_curPlayer);
                 }
@@ -157,21 +156,13 @@ public class ScoreScreen : MonoBehaviour {
         if (!GameManager.Instance.PlayerStart.PlayersReference[0].GetComponent<PlayerController>().PlayerIndexSet)
             return;
 
-        if (GameManager.Instance.PlayerStart.PlayersReference[0].GetComponent<PlayerController>().IsUsingAController)
+        if (GamePad.GetState(GameManager.Instance.PlayerStart.PlayersReference[0].GetComponent<PlayerController>().playerIndex).Buttons.Start == ButtonState.Pressed)
         {
-            if (GamePad.GetState(GameManager.Instance.PlayerStart.PlayersReference[0].GetComponent<PlayerController>().playerIndex).Buttons.Start == ButtonState.Pressed)
+            if (GameManager.Instance.CurrentGameMode.IsMiniGame())
             {
-                if (SceneManager.GetActiveScene().name == MinigameManager.GetSceneNameFromMinigame(MiniGame.KickThemAll))
-                {
-                    SceneManager.LoadScene(1); // ugly?
-                }
-                //ExitToMainMenu();
+                SceneManager.LoadScene(1); // ugly?
             }
-        }
-        else
-        {
-            if (Input.GetKeyDown(KeyCode.Escape))
-                ExitToMainMenu();
+            //ExitToMainMenu();
         }
         // TODO: handle pause input here?
     }

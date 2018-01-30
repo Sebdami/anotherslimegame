@@ -127,7 +127,7 @@ public class EvolutionGhost : EvolutionComponent
         gameObject.layer = LayerMask.NameToLayer("GhostPlayer");
         Player playerComponent = GetComponent<Player>();
 
-        if (!playerComponent.evolutionTutoShown[(int)Powers.Ghost] && !MinigameManager.IsAMiniGameScene())
+        if (!playerComponent.evolutionTutoShown[(int)Powers.Ghost] && !GameManager.Instance.CurrentGameMode.IsMiniGame())
         {
             playerComponent.evolutionTutoShown[(int)Powers.Ghost] = true;
             Utils.PopTutoText("Hold LT to leave a trail behind", playerComponent);
@@ -202,13 +202,13 @@ public class EvolutionGhost : EvolutionComponent
                     RaycastHit hit = new RaycastHit();
                     if(Physics.Raycast(ray, out hit, 1.0f, ~(1 << LayerMask.NameToLayer("GhostTrail"))))
                     {
-                        GameObject trailPane = ResourceUtils.Instance.poolManager.ghostTrailPool.GetItem(null, hit.point + Vector3.up * 0.01f, Quaternion.identity, true, true);
+                        GameObject trailPane = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.GhostTrail).GetItem(null, hit.point + Vector3.up * 0.01f, Quaternion.identity, true, true);
                         float scale = Random.Range(0.8f, 1.2f);
                         trailPane.transform.localScale *= scale;
                         timeSinceLastTrailComponentSpawned = 0.0f;
                         if (hit.collider.GetComponent<PlatformGameplay>())
                             trailPane.transform.SetParent(hit.collider.transform);
-                        trailPane.GetComponent<GhostTrail>().owner = GetComponent<PlayerController>();
+                        trailPane.GetComponent<GhostTrail>().owner = GetComponent<PlayerControllerHub>();
                         trailPane.transform.rotation = Quaternion.LookRotation(transform.forward, hit.normal);
                     }
                     

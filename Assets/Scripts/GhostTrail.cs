@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GhostTrail : MonoBehaviour {
 
-    public PlayerController owner;
+    public PlayerControllerHub owner;
     [Tooltip("Must correspond to the time set in the pool manager")]
     public float lifeTime;
     MeshRenderer mr;
@@ -21,7 +21,7 @@ public class GhostTrail : MonoBehaviour {
     private void OnEnable()
     {
         lifeTimer = 0.0f;
-        lifeTime = ResourceUtils.Instance.poolManager.ghostTrailPool.timerReturnToPool;
+        lifeTime = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.GhostTrail).timerReturnToPool;
         fadeOutTimer = 0.0f;
         mr = GetComponent<MeshRenderer>();
         ps = GetComponentInChildren<ParticleSystem>();
@@ -72,7 +72,7 @@ public class GhostTrail : MonoBehaviour {
 
     private void OnTriggerEnter(Collider other)
     {
-        PlayerController player = other.GetComponent<PlayerController>();
+        PlayerControllerHub player = other.GetComponent<PlayerControllerHub>();
         if(player && player != owner)
         {
             if(player.PlayerState == player.restrainedByGhostState)
@@ -88,7 +88,7 @@ public class GhostTrail : MonoBehaviour {
 
     private void OnTriggerStay(Collider other)
     {
-        PlayerController player = other.GetComponent<PlayerController>();
+        PlayerControllerHub player = other.GetComponent<PlayerControllerHub>();
         if (player && player != owner)
         {
             if (player.PlayerState == player.restrainedByGhostState)

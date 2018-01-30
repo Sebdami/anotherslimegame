@@ -60,15 +60,21 @@ public class DebugPanel : MonoBehaviour {
 
     void UpdateCollectableText()
     {
-        Player player = DebugTools.DebugPlayerSelected;
         collectablesText.text = "";
-        for (int i = 0; i < player.Collectables.Length; i++)
-            collectablesText.text += player.Collectables[i] + " " + ((CollectableType)i).ToString() + " collectable\n";
+        collectablesText.text += GameManager.Instance.Runes + " " + CollectableType.Rune.ToString() + "\n";
+        collectablesText.text += GameManager.Instance.GlobalMoney + " " + CollectableType.Money.ToString() + "\n";
+
+        Player player = DebugTools.DebugPlayerSelected;
+        collectablesText.text += player.NbLife + " " + PlayerUIStat.Life.ToString() + "\n";
+        collectablesText.text += player.NbPoints + " " + PlayerUIStat.Points.ToString() + "\n";
     }
 
     void UpdatePlayerInfoText()
     {
-        PlayerController playerController = DebugTools.DebugPlayerSelected.GetComponent<PlayerController>();
+        PlayerControllerHub playerController = DebugTools.DebugPlayerSelected.GetComponent<PlayerControllerHub>();
+        if (playerController == null)
+            return;
+
         playerInfoText.text = "";
         playerInfoText.text += "Player index: " + (int)playerController.PlayerIndex + "\n";
         playerInfoText.text += "Use a controller: " + playerController.IsUsingAController + "\n";

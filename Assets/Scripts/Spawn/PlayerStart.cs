@@ -8,13 +8,20 @@ public class PlayerStart : MonoBehaviour {
 
     Transform[] playerStart;
     public GameObject playerPrefab;
+    [SerializeField] GameObject PlayerUI;
+    [SerializeField] GameMode gameMode;
+
     public GameObject[] cameraPlayerReferences;
     uint activePlayersAtStart = 0;
-    public bool DEBUG_playWithFourPlayers = true;
+    public bool DEBUG_playXPlayers = true;
+    [Range(1,4)]
+    public uint DEBUG_NbPlayers = 1;
 
     List<GameObject> playersReference = new List<GameObject>();
     [SerializeField]
     public Color[] colorPlayer;
+
+
 
     public List<GameObject> PlayersReference
     {
@@ -39,19 +46,19 @@ public class PlayerStart : MonoBehaviour {
             playerStart[i] = transform.GetChild(i);
         GameManager.Instance.RegisterPlayerStart(this);
         SpawnPlayers();
-        AttributeCamera();
+        Debug.Assert(gameMode != null, "Missing gameMode");
+        gameMode.AttributeCamera(activePlayersAtStart, cameraPlayerReferences, playersReference);
 
         // Inits
         if (SceneManager.GetActiveScene() != SceneManager.GetSceneByBuildIndex(0))
         {
             InitializeScorePanel();
-            InitializePlayersUI();
+
         }
-        if (SceneManager.GetActiveScene().name == "SceneMinigamePush")
-        {
-            MiniGamePushManager.Singleton.StartGame(PlayersReference);
-           
-        }
+
+        if( !GameManager.Instance.IsInHub() && GameManager.Instance.SpecificPlayerUI != null)
+            GameManager.Instance.SpecificPlayerUI.Init();
+        gameMode.StartGame(playersReference);
 
         // Pour chaque joueur
         //for (int i = 0; i < GameManager.Instance.PlayerStart.PlayersReference.Count; i++)
@@ -81,9 +88,9 @@ public class PlayerStart : MonoBehaviour {
     void CheckNumberOfActivePlayers()
     {
 #if UNITY_EDITOR
-        if (DEBUG_playWithFourPlayers)
+        if (DEBUG_playXPlayers)
         {
-            activePlayersAtStart = 4;
+            activePlayersAtStart = DEBUG_NbPlayers;
             return;
         }
 #endif
@@ -107,7 +114,20 @@ public class PlayerStart : MonoBehaviour {
     public void SpawnPlayers()
     {
         CheckNumberOfActivePlayers();
-        
+
+        if (GameManager.Instance.DataContainer == null)
+        {
+            GameManager.Instance.RegisterDataContainer(FindObjectOfType<SlimeDataContainer>());
+        }
+
+        if (GameManager.Instance.DataContainer != null)
+        {
+            if (DEBUG_playXPlayers)
+                activePlayersAtStart = DEBUG_NbPlayers;
+            else
+                activePlayersAtStart = (uint)GameManager.Instance.DataContainer.nbPlayers;
+        }
+
         for (int i = 0; i < activePlayersAtStart; i++)
         {
             GameObject go = Instantiate(playerPrefab);
@@ -120,41 +140,38 @@ public class PlayerStart : MonoBehaviour {
             PlayerController playerController = go.GetComponent<PlayerController>();
             
             playerController.PlayerIndex = (PlayerIndex)i;
-            playerController.IsUsingAController = true;
             playerController.PlayerIndexSet = true;
 
-            if (i > 0)
+            if (GameManager.Instance.DataContainer != null)
             {
-                go.transform.GetChild(0).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
-                go.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
-                go.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
-
-                go.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
-                go.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(1).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+                if (GameManager.Instance.DataContainer.colorFadeSelected[i])
+                    go.transform.GetComponentInChildren<PlayerCosmetics>().UseColorFade = true;
+                else
+                    go.transform.GetComponentInChildren<PlayerCosmetics>().SetUniqueColor(GameManager.Instance.DataContainer.selectedColors[i]);
+                go.transform.GetComponentInChildren<PlayerCosmetics>().FaceType = (FaceType)GameManager.Instance.DataContainer.selectedFaces[i];
             }
+            else
+            {
+                if (i > 0)
+                {
+                    go.transform.GetChild(0).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+                    go.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+                    go.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+
+                    go.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+                    go.transform.GetChild(0).GetChild(0).GetChild(1).GetChild(1).GetComponent<MeshRenderer>().material.SetColor("_Color", colorPlayer[i - 1]);
+                }
+            }
+
             PlayersReference.Add(go);
            
         }
 
-        if (GameManager.Instance.playerCollectables == null)
-        {
-            GameManager.Instance.playerCollectables = new int[activePlayersAtStart][];
-            GameManager.Instance.playerEvolutionTutoShown = new bool[activePlayersAtStart][];
-            GameManager.Instance.playerCostAreaTutoShown = new bool[activePlayersAtStart];
-        }
-        else
-        {
-            if (MinigameManager.IsAMiniGameScene())
-                return;
+        // Ugly shit, should be handled in gamemode @Anthony
+        if (SceneManager.GetActiveScene().name == "MinigameAntho")
+            ColorFloorHandler.Init(activePlayersAtStart);
 
-            for (int i = 0; i < activePlayersAtStart; i++)
-            {
-                Player currentPlayer = PlayersReference[i].GetComponent<Player>();
-                currentPlayer.Collectables = GameManager.Instance.playerCollectables[i];
-                currentPlayer.evolutionTutoShown = GameManager.Instance.playerEvolutionTutoShown[i];
-                currentPlayer.costAreaTutoShown = GameManager.Instance.playerCostAreaTutoShown[i];
-            }
-        }
+
     }
 
     public void AttributeCamera()
@@ -180,7 +197,7 @@ public class PlayerStart : MonoBehaviour {
         for (int i = 0; i < activePlayersAtStart; i++)
         {
             GameObject go = PlayersReference[i];
-            if (SceneManager.GetActiveScene().name == "SceneMinigamePush")
+            if (SceneManager.GetActiveScene().name == "MinigamePush")
             {
                 //cameraPlayerReferences[i].transform.GetChild(1).GetComponent<Cinemachine.CinemachineVirtualCamera>().LookAt = go.transform;
             }
@@ -189,22 +206,17 @@ public class PlayerStart : MonoBehaviour {
                 cameraPlayerReferences[i].transform.GetChild(1).GetComponent<Cinemachine.CinemachineFreeLook>().LookAt = go.transform.GetChild((int)PlayerChildren.CameraTarget);
                 cameraPlayerReferences[i].transform.GetChild(1).GetComponent<Cinemachine.CinemachineFreeLook>().Follow = go.transform;
                 cameraPlayerReferences[i].transform.GetChild(1).GetComponent<DynamicJoystickCameraController>().playerIndex = (PlayerIndex)i;
-                cameraPlayerReferences[i].transform.GetChild(1).GetComponent<DynamicJoystickCameraController>().associatedPlayerController = go.GetComponent<PlayerController>();
+                cameraPlayerReferences[i].transform.GetChild(1).GetComponent<DynamicJoystickCameraController>().associatedPlayerController = go.GetComponent<PlayerControllerHub>();
             }
 
             go.GetComponent<Player>().cameraReference = cameraPlayerReferences[i];
             cameraPlayerReferences[i].SetActive(true);
-  
         }
     }
 
     void InitializeScorePanel()
     {
-        GameManager.Instance.ScoreScreenReference.Init();
-    }
-
-    void InitializePlayersUI()
-    {
-        GameManager.Instance.PlayerUI.Init();
+        if(GameManager.Instance.ScoreScreenReference != null)
+            GameManager.Instance.ScoreScreenReference.Init();
     }
 }

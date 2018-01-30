@@ -1,24 +1,87 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum ViewMode {
+    thirdPerson3d, // Camera + deplacement comme dans  hub
+    sideView3d, // Camera avec orientation quasie fixe sur coté + deplacement 3d  
+    sideView2d// Camera avec orientation quasie fixe + deplacement 2d 
+} 
 
+public class GameModeData
+{
 
-abstract public class GameMode {
-
-    readonly protected int nbPlayersMin;
-    readonly protected int nbPlayersMax;
-
-    public GameMode(int _nbPlayerMin= 2,int nbPlayerMax = 4)
-    {
-        nbPlayersMin = _nbPlayerMin;
-    }
-    public virtual void OnBegin()
+    public GameModeData(GameMode mode)
     {
 
     }
-    public abstract void AttributeCamera();
+}
+
+abstract public class GameMode : MonoBehaviour
+{
+    [SerializeField] protected int nbPlayersMin;
+    [SerializeField] protected int nbPlayersMax;
+    // Use to remove damage on points based on gamemode when players collide. Players will still be expulsed
+    [SerializeField] private bool takesDamageFromPlayer = true;
+    // Use to remove damage on points based on gamemode when players collide with a trap. Players will still be expulsed
+    [SerializeField] private bool takesDamageFromTraps = true;
+    [SerializeField] private ViewMode viewMode = ViewMode.thirdPerson3d;
+
+    #region getterSetters
+    public bool TakesDamageFromPlayer
+    {
+        get
+        {
+            return takesDamageFromPlayer;
+        }
+    }
+
+    public bool TakesDamageFromTraps
+    {
+        get
+        {
+            return takesDamageFromTraps;
+        }
+    }
+
+    public ViewMode ViewMode{get{return viewMode;}}
+#endregion
+
+    public void Awake()
+    {
+        GameManager.Instance.CurrentGameMode = this;
+    }
+    public virtual bool IsMiniGame()
+    {
+        return !(this is HubMode);
+    }
+
+    public virtual void StartGame(List<GameObject> playerReferences)
+    {
+        
+    }
+    public virtual void AttributeCamera(uint activePlayersAtStart, GameObject[] cameraReferences, List<GameObject> playersReference)
+    {
+        if (cameraReferences.Length == 0)
+        {
+            return;
+        }
+        // By default, cameraP2 is set for 2-Player mode, so we only update cameraP1
+        if (activePlayersAtStart == 2)
+        {
+            cameraReferences[0].transform.GetChild(0).GetComponent<Camera>().rect = new Rect(0, 0, 0.5f, 1.0f);
+        }
+        // By default, cameraP3 and cameraP4 are set for 4-Player mode, so we only update cameraP1 and cameraP2
+        else if (activePlayersAtStart > 2)
+        {
+            cameraReferences[0].transform.GetChild(0).GetComponent<Camera>().rect = new Rect(0, 0.5f, 0.5f, 0.5f);
+            cameraReferences[1].transform.GetChild(0).GetComponent<Camera>().rect = new Rect(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+    }
+    public virtual  void PlayerHasFinished(Player player)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 

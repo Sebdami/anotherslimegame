@@ -5,20 +5,10 @@ using UnityEngine.SceneManagement;
 
 public class SpikeTrap : MonoBehaviour {
     [SerializeField]
-    CollectableType damageOn = CollectableType.Points;
+    PlayerUIStat damageOn = PlayerUIStat.Points;
     [SerializeField]
     int damage;
 
-	void OnTriggerEnter(Collider col)
-    {
-        if (col.GetComponentInParent<Player>())
-        {
-            Player p = col.GetComponentInParent<Player>();
-            p.CanDoubleJump = true;
-            p.UpdateCollectableValue(damageOn, -damage);
-            p.GetComponent<JumpManager>().Jump(JumpManager.JumpEnum.Basic);
-        }
-    }
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -26,11 +16,15 @@ public class SpikeTrap : MonoBehaviour {
         {
             Player p = collision.gameObject.GetComponentInParent<Player>();
 
-            PlayerController pController = p.GetComponent<PlayerController>();
+            PlayerControllerHub pController = p.GetComponent<PlayerControllerHub>();
 
             p.CanDoubleJump = true;
 
-            pController.GetComponent<PlayerCollisionCenter>().DamagePlayer(pController.GetComponent<Player>());
+            if (GameManager.Instance.IsInHub())
+                pController.GetComponent<PlayerCollisionCenter>().DamagePlayerHub();
+            else
+                pController.GetComponent<PlayerCollisionCenter>().DamagePlayer(pController.GetComponent<Player>(), damageOn);
+
             pController.GetComponent<PlayerCollisionCenter>().ExpulsePlayer(collision.collider.ClosestPoint(transform.position), pController.GetComponent<Rigidbody>(), 15);
         }
     }
