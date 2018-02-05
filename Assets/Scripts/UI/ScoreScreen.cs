@@ -41,9 +41,9 @@ public class ScoreScreen : MonoBehaviour {
         }
     }
 
-    public void RefreshScores(Player player)
+    public void RefreshScores(Player player, float _time = -1)
     {
-        float time = Time.timeSinceLevelLoad;
+        float time = (_time == -1) ? Time.timeSinceLevelLoad : _time;
         int minutes = Mathf.FloorToInt(time / 60);
         int seconds = (int)time % 60;
         rank++;
@@ -60,10 +60,20 @@ public class ScoreScreen : MonoBehaviour {
         {
             if (transform.childCount >= rank - 1) // who did this ugly line?
             {
-                transform.GetChild(rank - 1).GetComponent<PlayerScore>().SetScoreMiniGamePtsOnly(
-                    (int)player.PlayerController.PlayerIndex,
-                    player.NbPoints.ToString()
-                );
+                if (GameManager.Instance.CurrentGameMode.GetType() == typeof(KartGameMode))
+                {
+                    transform.GetChild(rank - 1).GetComponent<PlayerScore>().SetScoreMiniGameTimeOnly(
+                        (int)player.PlayerController.PlayerIndex,
+                        timeStr
+                    );
+                }
+                else
+                {
+                    transform.GetChild(rank - 1).GetComponent<PlayerScore>().SetScoreMiniGamePtsOnly(
+                        (int)player.PlayerController.PlayerIndex,
+                        player.NbPoints.ToString()
+                    );
+                }
 
                 transform.GetChild(rank - 1).gameObject.SetActive(true);
 
@@ -138,7 +148,8 @@ public class ScoreScreen : MonoBehaviour {
             for (int i = 0; i < players.Count; i++)
             {
                 Player curPlayer = players[i].GetComponent<Player>();
-                curPlayer.cameraReference.SetActive(false);
+                if(curPlayer.cameraReference)
+                    curPlayer.cameraReference.SetActive(false);
                 curPlayer.transform.SetParent(podium.GetChild(curPlayer.rank));
                 curPlayer.transform.localPosition = Vector3.zero;
                 curPlayer.transform.localRotation = Quaternion.identity;
@@ -152,7 +163,7 @@ public class ScoreScreen : MonoBehaviour {
     void Update()
     {
 
-        // TODO : Multi to be handle
+        // TODO : Multi to be handled
         if (!GameManager.Instance.PlayerStart.PlayersReference[0].GetComponent<PlayerController>().PlayerIndexSet)
             return;
 

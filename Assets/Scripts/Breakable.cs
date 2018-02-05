@@ -48,12 +48,7 @@ public class Breakable : MonoBehaviour {
             // pool de morceaux cassés
             int nbFragments = Random.Range(minFragments, maxFragments);
             for (int i = 0; i < nbFragments; i++)
-            {
-                GameObject fragment = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.BreakablePieces).GetItem();
-                fragment.transform.SetParent(transform);
-                fragment.transform.localPosition = Vector3.up * 0.5f;
-                fragment.SetActive(true);
-            }
+                ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.BreakablePieces).GetItem(transform, Vector3.up * 0.5f, Quaternion.identity, true);
 
             DropCollectableOnGround();
             if (AudioManager.Instance != null && AudioManager.Instance.breakFx != null)
@@ -66,19 +61,20 @@ public class Breakable : MonoBehaviour {
         int numberOfCollectablesToDrop = Random.Range(minCollectableDropOnBreak, maxCollectableDropOnBreak);
         for (int i = 0; i < numberOfCollectablesToDrop; i++)
         {
-            if(GameManager.Instance.IsInHub())
+            if (GameManager.Instance.IsInHub())
             {
                 GameObject go = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.Money).GetItem(null, transform.position + Vector3.up * 0.5f, Quaternion.identity, true);
 
                 go.GetComponent<Collectable>().Disperse(i);
-            } else
+            }
+            else
             {
                 GameObject go = ResourceUtils.Instance.poolManager.GetPoolByName(PoolName.CollectablePoints).GetItem(null, transform.position + Vector3.up * 0.5f, Quaternion.identity, true);
 
                 go.GetComponent<Collectable>().Disperse(i);
             }
 
-          
+
         }
     }
-}
+}        

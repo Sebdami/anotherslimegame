@@ -11,7 +11,7 @@ public class Collectable : MonoBehaviour
     private Vector3 direction;
 
     uint movementSpeed = 40;
-    private float value;
+    private int value = 5;
     public bool haveToDisperse = false;
 
     bool isAttracted = false;
@@ -20,7 +20,7 @@ public class Collectable : MonoBehaviour
     public bool hasBeenSpawned = false;
     public Player lastOwner;
 
-    public float Value
+    public int Value
     {
         get
         {
@@ -70,10 +70,20 @@ public class Collectable : MonoBehaviour
     {
         if (GetComponent<PoolChild>())
         {
-            haveToDisperse = true;
+            if (GetComponent<Fruits>())
+            {
+                haveToDisperse = false;
+            }
+            else
+            {
+                haveToDisperse = true;
+            }
             isAttracted = false;
             playerTarget = null;
-            GetComponent<Animator>().enabled = true;
+            if (GetComponent<Animator>())
+            {
+                GetComponent<Animator>().enabled = true;
+            }
         }
     }
 
@@ -130,7 +140,21 @@ public class Collectable : MonoBehaviour
         GetComponent<Rigidbody>().MovePosition(transform.position + direction * movementSpeed * Time.deltaTime);
         if (Vector3.Distance(playerTarget.transform.position, transform.position) < GetComponent<BoxCollider>().bounds.extents.magnitude)
         {
-            playerTarget.UpdateCollectableValue(type, (int)Value);
+            if (GetComponent<FruitType>())
+            {
+                if (playerTarget.GetComponent<Player>().associateFruit == GetComponent<FruitType>().typeFruit)
+                {
+                    playerTarget.UpdateCollectableValue(type, (int)value);
+                }
+                else
+                {
+                    playerTarget.UpdateCollectableValue(type, (int)value);
+                }
+            }
+            else
+            {
+				playerTarget.UpdateCollectableValue(type, (int)value);
+            }
 
             if (type == CollectableType.Rune)
             {

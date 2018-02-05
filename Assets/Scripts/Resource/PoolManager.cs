@@ -163,13 +163,11 @@ public class PoolLeader
 /*
  * Update this enum with your new pool's name 
  */
-public enum PoolName { BreakablePieces, CollectablePoints, MonsterShots, GhostTrail, Money, ColorFloorScorePickUp, RunnerBloc }
+public enum PoolName { BreakablePieces, CollectablePoints, MonsterShots, GhostTrail, Money, ColorFloorScorePickUp, RunnerBloc, Fruits }
 public class PoolManager : MonoBehaviour {
 
-    // TODO: externalize this to be set up from inspector
     [SerializeField]
     List<PoolLeader> poolLeaders;
-
     public PoolLeader GetPoolByName(PoolName _poolName)
     {
         foreach (PoolLeader leader in poolLeaders)
@@ -177,10 +175,8 @@ public class PoolManager : MonoBehaviour {
             if (leader.poolName == _poolName)
                 return leader;
         }
-
         return null;
     }
-
     void Start () {
 
         if (poolLeaders == null || poolLeaders.Count == 0)

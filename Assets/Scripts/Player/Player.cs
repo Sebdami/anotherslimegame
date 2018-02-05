@@ -23,7 +23,8 @@ public class Player : MonoBehaviour {
     public bool hasBeenTeleported = false;
 
     public bool isEdgeAssistActive = true;
-    PlayerControllerHub playerController;
+    [SerializeField]
+    PlayerController playerController;
 
     // UI [] typeCollectable
     public UIfct[] OnValuesChange;
@@ -47,6 +48,7 @@ public class Player : MonoBehaviour {
     // Ugly
     public bool isInMainTower = false;
 
+    public Fruit associateFruit;
 
 
 #region Accessors
@@ -93,12 +95,12 @@ public class Player : MonoBehaviour {
         }
     }
 
-    public PlayerControllerHub PlayerController
+    public PlayerController PlayerController
     {
         get
         {
             if (playerController == null)
-                playerController = GetComponent<PlayerControllerHub>();
+                playerController = GetComponent<PlayerController>();
             return playerController;
         }
 
@@ -223,7 +225,13 @@ public class Player : MonoBehaviour {
 
     private void PermanentEvolution(Evolution evolution)
     {
-        GameManager.EvolutionManager.AddEvolutionComponent(gameObject, evolution, true);
+        GameManager.EvolutionManager.AddEvolutionComponent(gameObject, evolution);
+    }
+
+
+    private void Start()
+    {
+
     }
 
     private void Update()

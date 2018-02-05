@@ -5,8 +5,28 @@ using UnityEngine;
 public enum ColorFloorPickUpType { Score, ColorArrow, ColorAround, SpeedUp, Bomb, Missile }
 public class ColorFloorPickUp : MonoBehaviour {
 
+    [SerializeField]
+    float speedBoostDuration = 10.0f;
+
+    [SerializeField]
+    float colorArrowRotationDelay = 2.0f;
+
     public ColorFloorPickUpType pickupType;
-	
+
+    Coroutine spinLittlePickupCoroutine;
+
+    IEnumerator Start()
+    {
+        if (pickupType == ColorFloorPickUpType.ColorArrow)
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(colorArrowRotationDelay);
+                transform.localEulerAngles += Vector3.up * 90;
+            }
+        }
+    }
+
     public void Collect(int _playerIndex)
     {
         switch (pickupType)
@@ -25,9 +45,14 @@ public class ColorFloorPickUp : MonoBehaviour {
                 break;
             // Get buff on pickup
             case ColorFloorPickUpType.SpeedUp:
+                GameManager.EvolutionManager.AddEvolutionComponent(
+                    GameManager.Instance.PlayerStart.PlayersReference[_playerIndex], GameManager.EvolutionManager.GetEvolutionByPowerName(Powers.Agile), speedBoostDuration
+                );
                 break;
         }
     }
+
+
 
 
 }
